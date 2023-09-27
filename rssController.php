@@ -11,7 +11,7 @@ class rssController
         $writeCache = new WriteCache();
         $rssXml     = $writeCache->getCache('cache', $name . '.rss');
 
-        header('Content-Type: text/xml');
+        header('Content-Type: application/rss+xml; charset=utf-8');
         die(trim($rssXml));
     }
 }

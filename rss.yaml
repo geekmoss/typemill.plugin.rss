@@ -1,7 +1,7 @@
 name: RSS
-version: 0.0.2
-description: Add RSS Feeds to Folders
-author: Andreas Zettl
+version: 0.0.4
+description: Add RSS Feeds to Folders, edited for using struction.txt bc navigation does not generate
+author: Andreas Zettl, edited by Geekmoss
 homepage: https://azettl.net
 licence: MIT
 

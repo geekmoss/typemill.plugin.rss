@@ -39,14 +39,17 @@ class rss extends Plugin
 	{
 		$this->updateRssXmls();
 	}
+
     public function onPageReady($pagedata)
     {
-        $data = $pagedata->getData();
+        // TODO: build and get rss per folder
 
-        if(isset($data['item']->folderContent) && is_array($data['item']->folderContent) && method_exists($this, 'addMeta'))
-        {
-            $this->addMeta('rss', '<link rel="alternate" type="application/rss+xml" title="' . $data['title'] . '" href="' . $data['item']->urlAbs . '/rss">');
-        }
+//        $data = $pagedata->getData();
+//
+//        if(isset($data['item']->folderContent) && is_array($data['item']->folderContent) && method_exists($this, 'addMeta'))
+//        {
+//            $this->addMeta('rss', '<link rel="alternate" type="application/rss+xml" title="' . $data['title'] . '" href="' . $data['item']->urlAbs . '/rss">');
+//        }
     }
 
     public static function addNewRoutes()
@@ -54,17 +57,18 @@ class rss extends Plugin
         $routes = [];
         
         $writeCache = new WriteCache();
-        $navigation = $writeCache->getCache('cache', 'navigation.txt');
-
-        foreach($navigation as $pageData){
-            if(isset($pageData->folderContent) && is_array($pageData->folderContent)){
-                $routes[] = [
-                    'httpMethod'    => 'get', 
-                    'route'         => $pageData->urlRelWoF . '/rss', 
-                    'class'         => 'Plugins\rss\rssController:' . $pageData->slug
-                ];
-            }
-        }
+        // TODO: build and get rss per folder
+//        $navigation = $writeCache->getCache('cache', 'navigation.txt');
+//
+//        foreach($navigation as $pageData){
+//            if(isset($pageData->folderContent) && is_array($pageData->folderContent)){
+//                $routes[] = [
+//                    'httpMethod'    => 'get',
+//                    'route'         => $pageData->urlRelWoF . '/rss',
+//                    'class'         => 'Plugins\rss\rssController:' . $pageData->slug
+//                ];
+//            }
+//        }
 		
 		$routes[] = [
 			'httpMethod'    => 'get', 
@@ -80,74 +84,17 @@ class rss extends Plugin
         $writeCache     = new WriteCache();
         $settingsArray  = Settings::loadSettings();
         $settings       = $settingsArray['settings'];
-        $navigation     = $writeCache->getCache('cache', 'navigation.txt');
+        $structure = $writeCache->getCache('cache', 'structure.txt');
 
-		$allItems = [];
-        foreach($navigation as $pageData){
-            if(isset($pageData->folderContent) && is_array($pageData->folderContent)){
-                # initiate object for metadata
-                $writeMeta = new WriteMeta();
-                $metadata  = $writeMeta->getPageMeta($settings, $pageData);
+        $uri = \Slim\Http\Uri::createFromEnvironment(new \Slim\Http\Environment($_SERVER))->withUserInfo('');
 
-                $items = [];
-                foreach($pageData->folderContent as $childData){
-                    $childMetadata  = $writeMeta->getPageMeta($settings, $childData);
-
-                    $allItems[
-						(isset($childMetadata['meta']['manualdate'])) ? $childMetadata['meta']['manualdate'] . '-' . $childMetadata['meta']['time'] : $childMetadata['meta']['modified'] . '-' . $childMetadata['meta']['time']
-					] = $items[] = [
-                        'title'         => htmlspecialchars($childData->name, ENT_XML1),
-                        'link'          => $childData->urlAbs,
-                        'description'   => htmlspecialchars($childMetadata['meta']['description'], ENT_XML1)
-                    ];
-                }
-                
-                $rssXml = $this->getRssXml(
-                    htmlspecialchars($pageData->name, ENT_XML1),
-                    $pageData->urlAbs,
-                    htmlspecialchars($metadata['meta']['description'], ENT_XML1),
-                    $items
-                );
-
-                $writeCache->updateCache('cache', $pageData->slug . '.rss', false, $rssXml);
-            }
-        }
-		
-		$uri = \Slim\Http\Uri::createFromEnvironment(new \Slim\Http\Environment($_SERVER))->withUserInfo('');
-		krsort($allItems);
-		$rssXml = $this->getRssXml(
-			htmlspecialchars($settings['plugins']['rss']['mainrsstitle'], ENT_XML1),
-			$uri->getBaseUrl(),
-			htmlspecialchars($settings['plugins']['rss']['mainrssdescription'], ENT_XML1),
-			$allItems
-		);
+        $rssXml = rssBuilder::build(
+            $settings['plugins']['rss']['mainrsstitle'],
+            $settings['plugins']['rss']['mainrssdescription'],
+            $uri->getBaseUrl(),
+            $structure
+        );
 
 		$writeCache->updateCache('cache', 'all.rss', false, $rssXml);
-    }
-
-    private function getRssXml(string $title, string $link, string $description, array $items)
-    {
-        $itemsXml = '';
-        foreach($items as $item){
-            $itemsXml .= '
-                <item>
-                    <title>' . $item['title'] . '</title>
-                    <link>' . $item['link'] . '</link>
-                    <description>' . $item['description'] . '</description>
-                </item>
-                ';
-        }
-
-        return '
-            <?xml version="1.0"?>
-            <rss version="2.0">
-                <channel>
-                    <title>' . $title . '</title>
-                    <link>' . $link . '</link>
-                    <description>' . $description . '</description>
-                    ' . $itemsXml . '
-                </channel>
-            </rss>
-        ';
     }
 }
